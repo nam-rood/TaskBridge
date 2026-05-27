@@ -27,5 +27,10 @@ cp "$BUILD_DIR/$APP_NAME" "$MACOS_DIR/"
 # 复制 Info.plist
 cp "Info.plist" "$CONTENTS_DIR/"
 
+# 对整个 App Bundle 做本地签名，让 macOS 权限系统稳定识别这个应用
+SIGN_IDENTITY="${CODE_SIGN_IDENTITY:--}"
+echo "🔏 正在签名 $APP_BUNDLE..."
+codesign --force --deep --sign "$SIGN_IDENTITY" "$APP_BUNDLE"
+
 echo "✅ 打包完成！"
 echo "👉 请在终端运行: open $APP_BUNDLE"

@@ -14,7 +14,7 @@ class FeishuOAuthManager: NSObject {
     }
 
     // 使用本地 HTTP 服务器接收回调
-    let redirectURI = "http://127.0.0.1:8080/callback"
+    let redirectURI = "http://127.0.0.1:21016/callback"
     private var listener: NWListener?
     private var currentConnection: NWConnection?
     private var loginCompletion: ((Result<String, Error>) -> Void)?
@@ -31,11 +31,18 @@ class FeishuOAuthManager: NSObject {
 
         self.loginCompletion = completion
 
-        // 1. 启动本地 HTTP 服务器监听 8080 端口
+        // 1. 启动本地 HTTP 服务器监听 21016 端口
         startLocalServer()
 
         // 2. 拼接飞书 OAuth 2.0 授权 URL
-        let urlString = "https://open.feishu.cn/open-apis/authen/v1/index?redirect_uri=\(redirectURI)&app_id=\(appId)&state=larkflow_state"
+        guard let encodedRedirectURI = redirectURI.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            DispatchQueue.main.async {
+                completion(.failure(NSError(domain: "OAuth", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法编码回调地址"])))
+            }
+            return
+        }
+
+        let urlString = "https://open.feishu.cn/open-apis/authen/v1/index?redirect_uri=\(encodedRedirectURI)&app_id=\(appId)&state=larkflow_state"
         guard let authURL = URL(string: urlString) else { return }
 
         // 3. 使用默认浏览器打开授权页面
@@ -48,7 +55,7 @@ class FeishuOAuthManager: NSObject {
         stopLocalServer() // 确保之前的监听已关闭
 
         do {
-            let port = NWEndpoint.Port(integerLiteral: 8080)
+            let port = NWEndpoint.Port(integerLiteral: 21016)
             let parameters = NWParameters.tcp
             listener = try NWListener(using: parameters, on: port)
 
@@ -57,10 +64,10 @@ class FeishuOAuthManager: NSObject {
             }
 
             listener?.start(queue: .main)
-            print("🚀 本地回调服务器已启动，监听端口 8080...")
+            print("🚀 本地回调服务器已启动，监听端口 21016...")
         } catch {
             print("❌ 启动本地服务器失败: \(error)")
-            let nsError = NSError(domain: "OAuth", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法启动本地回调服务器，端口 8080 可能被占用"])
+            let nsError = NSError(domain: "OAuth", code: 0, userInfo: [NSLocalizedDescriptionKey: "无法启动本地回调服务器，端口 21016 可能被占用"])
             DispatchQueue.main.async { self.loginCompletion?(.failure(nsError)) }
         }
     }
@@ -101,7 +108,7 @@ class FeishuOAuthManager: NSObject {
 
     private func handleCallbackPath(_ path: String, connection: NWConnection) {
         // 构造一个完整的 URL 以便解析 Query 参数
-        guard let url = URL(string: "http://127.0.0.1:8080\(path)"),
+        guard let url = URL(string: "http://127.0.0.1:21016\(path)"),
               let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
               let queryItems = components.queryItems else {
             sendHTTPResponse(to: connection, message: "Invalid Request")
@@ -238,7 +245,7 @@ class FeishuOAuthManager: NSObject {
             return
         }
 
-        getAppAccessToken { [weak self] result in
+        getAppAccessToken { result in
             switch result {
             case .success(let appAccessToken):
                 let url = URL(string: "https://open.feishu.cn/open-apis/authen/v1/refresh_access_token")!

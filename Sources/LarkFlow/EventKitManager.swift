@@ -19,12 +19,18 @@ class EventKitManager: ObservableObject {
             status = EKEventStore.authorizationStatus(for: .reminder)
         }
 
-        DispatchQueue.main.async {
-            // 在 macOS 14+ 中，.fullAccess 和 .authorized 都算作已授权
-            if #available(macOS 14.0, *) {
-                self.isAuthorized = (status == .fullAccess || status == .authorized)
-            } else {
-                self.isAuthorized = (status == .authorized)
+        let authorized: Bool
+        if #available(macOS 14.0, *) {
+            authorized = (status == .fullAccess || status == .authorized)
+        } else {
+            authorized = (status == .authorized)
+        }
+
+        if Thread.isMainThread {
+            isAuthorized = authorized
+        } else {
+            DispatchQueue.main.async {
+                self.isAuthorized = authorized
             }
         }
     }
@@ -90,18 +96,86 @@ class EventKitManager: ObservableObject {
         }
     }
 
-    // 根据 ID 获取提醒事项
+    func getCalendar(byId id: String) -> EKCalendar? {
+        store.calendar(withIdentifier: id)
+    }
+
+    func getCalendar(title: String) -> EKCalendar? {
+        store.calendars(for: .reminder).first { $0.title == title }
+    }
+
+    func fetchReminders(in calendars: [EKCalendar], completion: @escaping ([EKReminder]) -> Void) {
+        guard isAuthorized else {
+            completion([])
+            return
+        }
+
+        let predicate = store.predicateForReminders(in: calendars)
+        store.fetchReminders(matching: predicate) { reminders in
+            DispatchQueue.main.async {
+                completion(reminders ?? [])
+            }
+        }
+    }
+
+    func dueInfo(from reminder: EKReminder) -> (timestamp: String, isAllDay: Bool)? {
+        guard let components = reminder.dueDateComponents,
+              let date = Calendar.current.date(from: components) else {
+            return nil
+        }
+
+        let timestamp = String(Int64(date.timeIntervalSince1970 * 1000))
+        let isAllDay = components.hour == nil && components.minute == nil && components.second == nil
+        return (timestamp, isAllDay)
+    }
+
+    func applyDue(timestamp: String?, isAllDay: Bool, to reminder: EKReminder) {
+        guard let timestamp = timestamp,
+              let milliseconds = Double(timestamp),
+              !timestamp.isEmpty else {
+            reminder.dueDateComponents = nil
+            return
+        }
+
+        let date = Date(timeIntervalSince1970: milliseconds / 1000)
+        if isAllDay {
+            reminder.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        } else {
+            reminder.dueDateComponents = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        }
+    }
+
+    // 根据标题在指定日历中查找提醒事项
+    func findReminder(title: String, in calendar: EKCalendar, completion: @escaping (EKReminder?) -> Void) {
+        guard isAuthorized else {
+            completion(nil)
+            return
+        }
+
+        let predicate = store.predicateForReminders(in: [calendar])
+        store.fetchReminders(matching: predicate) { reminders in
+            let found = reminders?.first(where: { $0.title == title })
+            completion(found)
+        }
+    }
+
     func getReminder(byId id: String, completion: @escaping (EKReminder?) -> Void) {
         guard isAuthorized else {
             completion(nil)
             return
         }
 
-        // EventKit 获取单个 Reminder 比较特殊，需要用 predicate
+        if let reminder = store.calendarItem(withIdentifier: id) as? EKReminder {
+            completion(reminder)
+            return
+        }
+
         let predicate = store.predicateForReminders(in: nil)
         store.fetchReminders(matching: predicate) { reminders in
-            let found = reminders?.first(where: { $0.calendarItemIdentifier == id })
-            completion(found)
+            let reminder = reminders?.first { $0.calendarItemIdentifier == id }
+            DispatchQueue.main.async {
+                completion(reminder)
+            }
         }
     }
 
@@ -113,6 +187,17 @@ class EventKitManager: ObservableObject {
             return true
         } catch {
             print("保存提醒事项失败: \(error.localizedDescription)")
+            return false
+        }
+    }
+
+    @discardableResult
+    func removeReminder(_ reminder: EKReminder) -> Bool {
+        do {
+            try store.remove(reminder, commit: true)
+            return true
+        } catch {
+            print("删除提醒事项失败: \(error.localizedDescription)")
             return false
         }
     }
