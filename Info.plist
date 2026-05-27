@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key>
-    <string>LarkFlow</string>
+    <string>TaskBridge</string>
     <key>CFBundleIdentifier</key>
-    <string>com.namrood.LarkFlow</string>
+    <string>com.namrood.TaskBridge</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>
-    <string>LarkFlow</string>
+    <string>TaskBridge</string>
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
@@ -19,17 +19,17 @@
     <key>LSUIElement</key>
     <true/>
     <key>NSRemindersUsageDescription</key>
-    <string>LarkFlow 需要访问您的提醒事项，以便将飞书任务同步到本地。</string>
+    <string>TaskBridge 需要访问您的提醒事项，以便将飞书任务同步到本地。</string>
     <key>NSRemindersFullAccessUsageDescription</key>
-    <string>LarkFlow 需要完全访问您的提醒事项，以便实现双向同步。</string>
+    <string>TaskBridge 需要完全访问您的提醒事项，以便实现双向同步。</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
             <key>CFBundleURLName</key>
-            <string>com.namrood.LarkFlow</string>
+            <string>com.namrood.TaskBridge</string>
             <key>CFBundleURLSchemes</key>
             <array>
-                <string>larkflow</string>
+                <string>taskbridge</string>
             </array>
         </dict>
     </array>

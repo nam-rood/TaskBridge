@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "LarkFlow",
+    name: "TaskBridge",
     platforms: [
         .macOS(.v13) // 使用 MenuBarExtra 需要 macOS 13.0 及以上版本
     ],
@@ -16,14 +16,10 @@ let package = Package(
         // Targets are the basic building blocks of a package, defining a module or a test suite.
         // Targets can depend on other targets in this package and products from dependencies.
         .executableTarget(
-            name: "LarkFlow",
+            name: "TaskBridge",
             dependencies: [
                 .product(name: "GRDB", package: "GRDB.swift")
             ]
-        ),
-        .testTarget(
-            name: "LarkFlowTests",
-            dependencies: ["LarkFlow"]
         ),
     ]
 )

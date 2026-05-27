@@ -3,7 +3,7 @@
 # 退出遇到错误时停止
 set -e
 
-APP_NAME="LarkFlow"
+APP_NAME="TaskBridge"
 BUILD_DIR=".build/release"
 APP_BUNDLE="$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
